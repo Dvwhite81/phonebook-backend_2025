@@ -7,5 +7,5 @@
     "strict": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*", "mongo.ts"]
+  "include": ["src/**/*", "src/mongo.ts"]
 }

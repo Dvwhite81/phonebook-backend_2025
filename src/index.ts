@@ -4,28 +4,8 @@ import morgan from 'morgan';
 import { config } from 'dotenv';
 config();
 
-let PERSONS = [
-  {
-    id: 1,
-    name: 'Arto Hellas',
-    number: '040-123456',
-  },
-  {
-    id: 2,
-    name: 'Ada Lovelace',
-    number: '39-44-5323523',
-  },
-  {
-    id: 3,
-    name: 'Dan Abramov',
-    number: '12-43-234345',
-  },
-  {
-    id: 4,
-    name: 'Mary Poppendieck',
-    number: '39-23-6423122',
-  },
-];
+import PersonModel from './models/person';
+import { PersonType } from './types';
 
 const app = express();
 
@@ -47,72 +27,70 @@ app.get('/', (req: Request, res: Response) => {
 
 // INFO
 app.get('/info', (req: Request, res: Response) => {
-  const date = new Date();
+  PersonModel.find({}).then((people: PersonType[]) => {
+    const { length } = people;
+    const date = new Date();
 
-  res.send(
-    `<p>Phonebook has info for ${PERSONS.length} people</p><p>${date}</p>`,
-  );
+    res.send(`<p>Phonebook has info for ${length} people</p><p>${date}</p>`);
+  });
 });
 
 // GET ALL
 app.get('/api/persons', (req: Request, res: Response) => {
-  res.json(PERSONS);
+  PersonModel.find({}).then((people: PersonType[]) => {
+    res.json(people);
+  });
 });
 
 // GET ONE
 app.get('/api/persons/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-  const person = PERSONS.find((p) => p.id === Number(id));
 
-  if (person) {
-    res.json(person);
-  } else {
-    res.status(404).send('Person could not be found');
-  }
+  PersonModel.findById(id)
+    .then((person: PersonType) => {
+      res.json(person);
+    })
+    .catch((error: any) => {
+      console.log('error:', error);
+      res.status(404).send('Person could not be found');
+    });
 });
 
 // DELETE ONE
 app.delete('/api/persons/:id', (req: Request, res: Response) => {
   const { id } = req.params;
-
-  const person = PERSONS.find((p) => p.id === Number(id));
-
-  if (person) {
-    PERSONS = PERSONS.filter((person) => person.id !== Number(id));
+  PersonModel.findByIdAndDelete(id).then(() => {
     res.status(204).end();
-  } else {
-    res.status(404).send('Person could not be found');
-  }
+  });
 });
 
 // ADD ONE
 app.post('/api/persons', (req: Request, res: Response) => {
-  const { name, number } = req.body;
+  const body = req.body;
 
-  if (!name || !number) {
+  if (!body.name || !body.number) {
     res.status(400).json({
       error: 'name and number are required',
     });
     return;
   }
 
-  const existingPerson = PERSONS.find((person) => person.name === name);
+  const exists = PersonModel;
 
-  if (existingPerson) {
+  if (exists) {
     res.status(400).json({
       error: 'name must be unique',
     });
     return;
   }
 
-  const newPerson = {
-    name,
-    number,
-    id: Math.floor(Math.random() * 1000000),
-  };
-  PERSONS.push(newPerson);
+  const person = new PersonModel({
+    name: body.name,
+    number: body.number,
+  });
+  console.log('PERSON:', person);
 
-  res.json({ person: newPerson });
+  person.save();
 });
 
 const PORT = process.env.PORT || 3001;
